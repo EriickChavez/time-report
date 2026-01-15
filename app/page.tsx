@@ -1,47 +1,94 @@
-import type React from "react";
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import "./globals.css";
+"use client";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+import { useState } from "react";
+import { CalendarView } from "@/components/calendar-view";
+import { TimeRegistration } from "@/components/time-registration";
+import { ExportView } from "@/components/export-view";
+import { ConfigurationView } from "@/components/configuration-view";
+import { UserInfo } from "@/components/user-info";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, Download, Settings } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Reporte de Tiempo - Sistema de Registro",
-  description:
-    "Sistema de gestión y registro de tiempo de trabajo con calendario, exportación a Excel y seguimiento de actividades",
-  generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
-};
+export default function Home() {
+  const [activeView, setActiveView] = useState<
+    "calendar" | "register" | "export" | "config"
+  >("calendar");
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
-      </body>
-    </html>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+        <div className="p-6 border-b border-sidebar-border">
+          <h1 className="text-xl font-bold text-sidebar-foreground">
+            Reporte de tiempo
+          </h1>
+        </div>
+
+        <nav className="flex-1 p-4">
+          <div className="space-y-2">
+            <Button
+              variant={activeView === "calendar" ? "default" : "ghost"}
+              className="w-full justify-start text-base"
+              onClick={() => setActiveView("calendar")}
+            >
+              <Calendar className="mr-3 h-5 w-5" />
+              Calendario
+            </Button>
+
+            <Button
+              variant={activeView === "register" ? "default" : "ghost"}
+              className="w-full justify-start text-base"
+              onClick={() => setActiveView("register")}
+            >
+              <Clock className="mr-3 h-5 w-5" />
+              Registrar tiempo
+            </Button>
+
+            <Button
+              variant={activeView === "export" ? "default" : "ghost"}
+              className="w-full justify-start text-base"
+              onClick={() => setActiveView("export")}
+            >
+              <Download className="mr-3 h-5 w-5" />
+              Exportar
+            </Button>
+
+            <Button
+              variant={activeView === "config" ? "default" : "ghost"}
+              className="w-full justify-start text-base"
+              onClick={() => setActiveView("config")}
+            >
+              <Settings className="mr-3 h-5 w-5" />
+              Configuración
+            </Button>
+            <Button
+              variant={activeView === "config" ? "default" : "ghost"}
+              className="w-full justify-start text-base"
+              onClick={() => setActiveView("config")}
+            >
+              <Settings className="mr-3 h-5 w-5" />
+              Configuración
+            </Button>
+          </div>
+        </nav>
+
+        {/* User Info and Logout */}
+        <div className="p-4 border-t border-sidebar-border">
+          <UserInfo />
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {activeView === "calendar" && (
+          <CalendarView onRegisterClick={() => setActiveView("register")} />
+        )}
+        {activeView === "register" && (
+          <TimeRegistration onSuccess={() => setActiveView("calendar")} />
+        )}
+        {activeView === "export" && <ExportView />}
+        {activeView === "config" && <ConfigurationView />}
+      </main>
+    </div>
   );
 }

@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Bcrypt hashed password
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  fieldConfigs  FieldConfig[]
+  timeEntries   TimeEntry[]
+
+  @@map("profiles")
+}
+
+model FieldConfig {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  fieldId     String   @map("field_id")
+  label       String
+  type        String
+  required    Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  allowFiles  Boolean  @default(false) @map("allow_files")
+  options     Json?    // Array of strings
+  order       Int
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  profile Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fieldId])
+  @@map("field_configs")
+}
+
+model TimeEntry {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  date              String   // Store as YYYY-MM-DD for simpler range logic or DateTime
+  startTime         String?  @map("start_time")
+  endTime           String?  @map("end_time")
+  reporter          String?
+  status            String   @default("pending")
+  fieldData         Json?    @map("field_data") // For dynamic fields
+  files             Json?    // For attached files info
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Added some specific fields if needed, or keep generic as SQL script suggests
+  evidence          String?  @db.Text
+  observations      String?  @db.Text
+  evidenceFiles     Json?    @map("evidence_files") 
+  observationFiles  Json?    @map("observation_files")
+  project           String?
+  task              String?
+  description       String?  @db.Text
+  duration          Float?
+
+  profile Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@map("time_entries")
+}

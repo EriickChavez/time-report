@@ -1,6 +1,7 @@
 
 export interface TimeEntry {
     id: string
+    userId: string
     created_at?: string
     updated_at?: string
     date: string

@@ -2,14 +2,17 @@
 import { create } from "zustand"
 import { TimeEntry } from "@/types/time-entry"
 import { TimeEntryRepository } from "@/interfaces/TimeEntryRepository"
-import { SupabaseTimeEntryRepository } from "@/infrastructure/SupabaseTimeEntryRepository"
+import { PrismaTimeEntryRepository } from "@/infrastructure/PrismaTimeEntryRepository"
 import moment from "moment"
 
 interface TimeEntryStore {
     entries: TimeEntry[]
+    userId: string | null
     repository: TimeEntryRepository
+    setUserId: (userId: string | null) => void
+    setRepository: (repository: TimeEntryRepository) => void
     fetchEntries: () => Promise<void>
-    addEntry: (entry: Omit<TimeEntry, "id" | "created_at" | "updated_at">) => Promise<void>
+    addEntry: (entry: Omit<TimeEntry, "id" | "userId" | "created_at" | "updated_at">) => Promise<void>
     deleteEntry: (id: string) => Promise<void>
     updateEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>
     getEntriesByDateRange: (startDate: string, endDate: string) => TimeEntry[]
@@ -18,15 +21,32 @@ interface TimeEntryStore {
 
 export const useTimeEntryStore = create<TimeEntryStore>((set, get) => ({
     entries: [],
-    repository: new SupabaseTimeEntryRepository(), // Default implementation
+    userId: null,
+    repository: new PrismaTimeEntryRepository(), // Prisma implementation
+
+    setUserId: (userId) => {
+        set({ userId })
+        if (userId) get().fetchEntries()
+    },
+
+    setRepository: (repository: TimeEntryRepository) => {
+        set({ repository })
+        if (get().userId) get().fetchEntries()
+    },
 
     fetchEntries: async () => {
-        const entries = await get().repository.getEntries()
+        const { userId, repository } = get()
+        if (!userId) return
+
+        const entries = await repository.getEntries(userId)
         set({ entries })
     },
 
     addEntry: async (entry) => {
-        const newEntry = await get().repository.addEntry(entry)
+        const { userId, repository } = get()
+        if (!userId) return
+
+        const newEntry = await repository.addEntry({ ...entry, userId })
         if (newEntry) {
             set((state) => ({
                 entries: [newEntry, ...state.entries],
@@ -35,7 +55,10 @@ export const useTimeEntryStore = create<TimeEntryStore>((set, get) => ({
     },
 
     deleteEntry: async (id) => {
-        const success = await get().repository.deleteEntry(id)
+        const { userId, repository } = get()
+        if (!userId) return
+
+        const success = await repository.deleteEntry(id, userId)
         if (success) {
             set((state) => ({
                 entries: state.entries.filter((entry) => entry.id !== id),
@@ -44,7 +67,10 @@ export const useTimeEntryStore = create<TimeEntryStore>((set, get) => ({
     },
 
     updateEntry: async (id, updates) => {
-        const updatedEntry = await get().repository.updateEntry(id, updates)
+        const { userId, repository } = get()
+        if (!userId) return
+
+        const updatedEntry = await repository.updateEntry(id, userId, updates)
         if (updatedEntry) {
             set((state) => ({
                 entries: state.entries.map((entry) => (entry.id === id ? updatedEntry : entry)),

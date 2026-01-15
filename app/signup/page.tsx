@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { signup } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,31 +19,23 @@ import Link from "next/link";
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
-    });
+    const result = await signup(email, password, fullName || undefined);
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
+    if (result.success) {
+      router.push("/");
+      router.refresh();
     } else {
-      setMessage("Revisar tu email para confirmar tu cuenta.");
+      setError(result.error || "Error al crear la cuenta");
       setLoading(false);
     }
   };
@@ -64,11 +56,16 @@ export default function SignupPage() {
                 {error}
               </div>
             )}
-            {message && (
-              <div className="bg-green-500/15 text-green-600 text-sm p-3 rounded-md">
-                {message}
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Nombre Completo (Opcional)</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Juan Pérez"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -85,15 +82,17 @@ export default function SignupPage() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Mínimo 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Crear Cuenta" : "Registrarse"}
+              {loading ? "Creando cuenta..." : "Registrarse"}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               ¿Ya tienes cuenta?{" "}
