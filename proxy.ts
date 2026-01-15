@@ -1,48 +1,47 @@
+// proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
 const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'secret-key'
+    process.env.JWT_SECRET || 'secret-key' // Usa la misma que en tu signup/login
 )
-
-// Routes that require authentication
-const protectedRoutes = ['/']
-
-// Routes that should redirect to home if already authenticated
-const authRoutes = ['/login', '/signup']
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const sessionCookie = request.cookies.get('session')?.value
 
-    // Verify session
     let isAuthenticated = false
     if (sessionCookie) {
         try {
+            // Validamos que el token sea real y no haya expirado
             await jwtVerify(sessionCookie, JWT_SECRET)
             isAuthenticated = true
         } catch (error) {
-            // Invalid token
             isAuthenticated = false
         }
     }
 
-    // Redirect to login if trying to access protected route without auth
-    if (protectedRoutes.includes(pathname) && !isAuthenticated) {
-        const loginUrl = new URL('/login', request.url)
-        return NextResponse.redirect(loginUrl)
+    // Rutas que NO requieren protección (login y signup)
+    const isAuthRoute = pathname === '/login' || pathname === '/signup'
+
+    // Rutas públicas (estáticos, imágenes, etc.)
+    const isPublicFile = pathname.startsWith('/_next') || pathname.includes('.')
+
+    // CASO 1: No hay sesión y quiere entrar a una ruta protegida (como la Home)
+    if (!isAuthenticated && !isAuthRoute && !isPublicFile) {
+        return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Redirect to home if trying to access auth routes while authenticated
-    if (authRoutes.includes(pathname) && isAuthenticated) {
-        const homeUrl = new URL('/', request.url)
-        return NextResponse.redirect(homeUrl)
+    // CASO 2: Hay sesión activa e intenta ir a Login o Signup
+    if (isAuthenticated && isAuthRoute) {
+        return NextResponse.redirect(new URL('/', request.url))
     }
 
     return NextResponse.next()
 }
 
+// El matcher es vital para que Next.js sepa qué interceptar
 export const config = {
-    matcher: ['/', '/login', '/signup'],
+    matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

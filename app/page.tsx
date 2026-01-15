@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarView } from "@/components/calendar-view";
 import { TimeRegistration } from "@/components/time-registration";
 import { ExportView } from "@/components/export-view";
@@ -8,11 +8,23 @@ import { ConfigurationView } from "@/components/configuration-view";
 import { UserInfo } from "@/components/user-info";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Download, Settings } from "lucide-react";
+import { getCurrentUser } from "./actions/auth";
+import { redirect } from "next/navigation";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<
     "calendar" | "register" | "export" | "config"
   >("calendar");
+  const validateUser = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      redirect("/login");
+    }
+  };
+
+  useEffect(() => {
+    Promise.resolve(validateUser());
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -53,14 +65,6 @@ export default function Home() {
               Exportar
             </Button>
 
-            <Button
-              variant={activeView === "config" ? "default" : "ghost"}
-              className="w-full justify-start text-base"
-              onClick={() => setActiveView("config")}
-            >
-              <Settings className="mr-3 h-5 w-5" />
-              Configuración
-            </Button>
             <Button
               variant={activeView === "config" ? "default" : "ghost"}
               className="w-full justify-start text-base"
