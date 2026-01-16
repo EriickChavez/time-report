@@ -90,7 +90,9 @@ export function ConfigurationView() {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="label">Label</Label>
+                <Label htmlFor="label" className="text-md mb-2 font-semibold">
+                  Label
+                </Label>
                 <Input
                   id="label"
                   placeholder="Nombre del campo"
@@ -102,7 +104,12 @@ export function ConfigurationView() {
               </div>
 
               <div>
-                <Label htmlFor="type">Tipo</Label>
+                <Label
+                  htmlFor="type"
+                  className="text-md mb-2 mb-3 font-semibold"
+                >
+                  Tipo
+                </Label>
                 <Select
                   value={newField.type}
                   onValueChange={(value: any) =>
@@ -125,7 +132,10 @@ export function ConfigurationView() {
 
               {newField.type === "select" && (
                 <div>
-                  <Label htmlFor="options">
+                  <Label
+                    htmlFor="options"
+                    className="text-md mb-2 font-semibold"
+                  >
                     Opciones (separadas por comas)
                   </Label>
                   <Input

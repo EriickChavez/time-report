@@ -1,3 +1,4 @@
+import { createFieldConfig, getAllFieldConfigs } from "@/app/actions/fields-config"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
@@ -15,11 +16,11 @@ export interface FieldConfig {
 interface FieldStore {
     fields: FieldConfig[]
     initializeFields: () => void
-    addField: (field: Omit<FieldConfig, "id" | "order">) => void
+    addField: (field: Omit<FieldConfig, "id" | "order">) => Promise<void>
     updateField: (id: string, updates: Partial<FieldConfig>) => void
     deleteField: (id: string) => void
     reorderFields: (fields: FieldConfig[]) => void
-    getEnabledFields: () => FieldConfig[]
+    getEnabledFields: () => FieldConfig[];
 }
 
 const DEFAULT_FIELDS: FieldConfig[] = [
@@ -92,7 +93,7 @@ export const useFieldStore = create<FieldStore>()(
                 }
             },
 
-            addField: (field) => {
+            addField: async (field) => {
                 const currentFields = get().fields
                 const newField: FieldConfig = {
                     ...field,
@@ -100,6 +101,21 @@ export const useFieldStore = create<FieldStore>()(
                     order: currentFields.length,
                     enabled: true,
                 }
+                const result = await createFieldConfig({
+                    id: newField.id,
+                    order: newField.order,
+                    label: newField.label,
+                    type: newField.type,
+                    required: newField.required,
+                    allowFiles: newField.allowFiles,
+                    options: JSON.stringify(newField.options),
+                    enabled: newField.enabled,
+                    userId: "37844ec2-4cc0-46f6-a031-02a8b3c9aa9e",
+                    fieldId: newField.id,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                console.log("[RESULT]---->", { result });
                 set({ fields: [...currentFields, newField] })
             },
 
@@ -121,6 +137,12 @@ export const useFieldStore = create<FieldStore>()(
             },
 
             getEnabledFields: () => {
+                console.log("getEnabledFields -------------------");
+                Promise.resolve(getAllFieldConfigs()).then((result) => {
+                    console.log("[RESULT]", { result });
+                }).catch((error) => {
+                    console.error("[ERROR]", error);
+                })
                 return get()
                     .fields.filter((field) => field.enabled)
                     .sort((a, b) => a.order - b.order)
