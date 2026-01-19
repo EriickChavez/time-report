@@ -15,6 +15,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { setLocalStorageItem } from "@/lib/storage";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -31,6 +32,7 @@ export default function LoginPage() {
     const result = await login(email, password);
 
     if (result.success) {
+      setLocalStorageItem("user", JSON.stringify(result.user));
       router.push("/");
       router.refresh();
     } else {

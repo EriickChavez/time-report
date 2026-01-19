@@ -7,7 +7,7 @@ import { LogOut, User } from "lucide-react";
 
 export function UserInfo() {
   const { user, loading } = useUser();
-
+  console.log("[USER INFO]", user, loading);
   if (loading) {
     return (
       <div className="flex items-center space-x-3 animate-pulse">
@@ -21,7 +21,20 @@ export function UserInfo() {
   }
 
   if (!user) {
-    return null;
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full justify-start"
+        onClick={() => logout()}
+      >
+        <p className="text-xs text-muted-foreground truncate">
+          Aqui --{localStorage.getItem("user")}
+        </p>
+        <LogOut className="mr-2 h-4 w-4" />
+        Cerrar Sesión
+      </Button>
+    );
   }
 
   return (

@@ -5,6 +5,8 @@ import { hashPassword, verifyPassword, createSession, getSession } from '@/lib/a
 import { setSessionCookie, deleteSessionCookie } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { Profile } from '@prisma/client'
+import { LOGIN_URL } from '@/services/services'
+import api from '@/services/api'
 
 export type AuthResult = {
     success: boolean
@@ -69,36 +71,35 @@ export async function signup(
  * Log in an existing user
  */
 export async function login(email: string, password: string): Promise<AuthResult> {
+    console.log("LOGIN", email, password)
     try {
         // Validate input
         if (!email || !password) {
             return { success: false, error: 'Email y contraseña son requeridos' }
         }
 
-        // Find user
-        const user = await prisma.profile.findUnique({
-            where: { email },
-        })
+        const response = await api.post('/auth/login', { email, password })
+        console.log("[RESPONSE]", response)
+
+        if (!response.success) {
+            return { success: false, error: response.error }
+        }
+
+        const { user, token } = response.data;
 
         if (!user) {
             return { success: false, error: 'Credenciales inválidas' }
         }
 
-        // Verify password
-        const isValidPassword = await verifyPassword(password, user.password)
-
-        if (!isValidPassword) {
-            return { success: false, error: 'Credenciales inválidas' }
+        // Create session
+        await setSessionCookie(token)
+        // 2. Guardar los datos visuales en localStorage (Para la UI)
+        console.log("[USER TO SAVE]", typeof window !== 'undefined', user)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(user));
         }
 
-        // Create session
-        const token = await createSession(user.id)
-        await setSessionCookie(token)
-
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user
-
-        return { success: true, user: userWithoutPassword }
+        return { success: true, user }
     } catch (error) {
         console.error('Login error:', error)
         return { success: false, error: 'Error al iniciar sesión' }
@@ -119,23 +120,18 @@ export async function logout(): Promise<void> {
 export async function getCurrentUser(): Promise<Omit<Profile, 'password'> | null> {
     try {
         const session = await getSession()
-
+        console.log("[SESSION]", session)
         if (!session) {
             return null
         }
 
-        const user = await prisma.profile.findUnique({
-            where: { id: session.userId },
-        })
+        let user = null;
 
         if (!user) {
             return null
         }
 
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user
-
-        return userWithoutPassword
+        return JSON.parse(user)
     } catch (error) {
         console.error('Get current user error:', error)
         return null

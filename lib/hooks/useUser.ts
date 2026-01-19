@@ -1,8 +1,7 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { getCurrentUser } from '@/app/actions/auth'
 import { Profile } from '@prisma/client'
+import { getLocalStorageItem } from '../storage'
 
 type User = Omit<Profile, 'password'>
 
@@ -11,10 +10,22 @@ export function useUser() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        getCurrentUser()
-            .then(setUser)
-            .catch(() => setUser(null))
-            .finally(() => setLoading(false))
+        const fetchUser = async () => {
+            try {
+                setLoading(true)
+                await getCurrentUser()
+                const data = getLocalStorageItem("user")
+                console.log("[USER FETCHED]", data)
+                setUser(data ? JSON.parse(data) : null)
+            } catch (error) {
+                console.error("Error fetching user:", error)
+                setUser(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchUser()
     }, [])
 
     return { user, loading }
