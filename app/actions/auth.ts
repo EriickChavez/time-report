@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword, createSession, getSession } from '@/lib/a
 import { setSessionCookie, deleteSessionCookie } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { Profile } from '@prisma/client'
-import { LOGIN_URL } from '@/services/services'
+import { LOGIN_URL, SIGNUP_URL } from '@/services/services'
 import api from '@/services/api'
 
 export type AuthResult = {
@@ -20,7 +20,7 @@ export type AuthResult = {
 export async function signup(
     email: string,
     password: string,
-    fullName?: string
+    full_name?: string
 ): Promise<AuthResult> {
     try {
         // Validate input
@@ -32,35 +32,22 @@ export async function signup(
             return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
         }
 
-        // Check if user already exists
-        const existingUser = await prisma.profile.findUnique({
-            where: { email },
-        })
+        const response = await api.post(SIGNUP_URL, { email, password, full_name })
 
-        if (existingUser) {
-            return { success: false, error: 'Este email ya está registrado' }
+        if (!response.success) {
+            return { success: false, error: response.error }
         }
 
-        // Hash password
-        const hashedPassword = await hashPassword(password)
+        const { user, token } = response.data;
 
-        // Create user
-        const user = await prisma.profile.create({
-            data: {
-                email,
-                password: hashedPassword,
-                fullName,
-            },
-        })
+        if (!user) {
+            return { success: false, error: 'Credenciales inválidas' }
+        }
 
         // Create session
-        const token = await createSession(user.id)
         await setSessionCookie(token)
 
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user
-
-        return { success: true, user: userWithoutPassword }
+        return { success: true, user }
     } catch (error) {
         console.error('Signup error:', error)
         return { success: false, error: 'Error al crear la cuenta' }
@@ -78,7 +65,7 @@ export async function login(email: string, password: string): Promise<AuthResult
             return { success: false, error: 'Email y contraseña son requeridos' }
         }
 
-        const response = await api.post('/auth/login', { email, password })
+        const response = await api.post(LOGIN_URL, { email, password })
         console.log("[RESPONSE]", response)
 
         if (!response.success) {
