@@ -185,6 +185,11 @@ export function ConfigurationView() {
 
         {/* Fields List */}
         <div className="space-y-3">
+          {fields.length === 0 && (
+            <p className="text-center text-muted-foreground">
+              No hay campos configurados
+            </p>
+          )}
           {sortedFields.map((field) => (
             <Card key={field.id} className="p-4">
               <div className="flex items-center gap-4">

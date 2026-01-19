@@ -1,4 +1,5 @@
-import { createFieldConfig, getAllFieldConfigs } from "@/app/actions/fields-config"
+import { createFieldConfig, deleteFieldConfig, getAllFieldConfigs } from "@/app/actions/fields-config"
+import { getLocalStorageItem } from "@/lib/storage"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
@@ -84,39 +85,54 @@ const DEFAULT_FIELDS: FieldConfig[] = [
 export const useFieldStore = create<FieldStore>()(
     persist(
         (set, get) => ({
-            fields: DEFAULT_FIELDS,
+            fields: [],//DEFAULT_FIELDS,
 
-            initializeFields: () => {
-                const currentFields = get().fields
-                if (currentFields.length === 0) {
-                    set({ fields: DEFAULT_FIELDS })
+            initializeFields: async () => {
+                const currentFields = await getAllFieldConfigs();
+                console.log("[CURRENT FIELDS]", currentFields);
+                if (!currentFields.success) return;
+                if (!!currentFields.fieldConfig && currentFields.fieldConfig.length > 0) {
+                    set({ fields: currentFields.fieldConfig as FieldConfig[] })
                 }
             },
 
             addField: async (field) => {
-                const currentFields = get().fields
+                const currentFields = get().fields;
+                const userJson = getLocalStorageItem("user");
+
+                if (!userJson) return;
+                const user = JSON.parse(userJson);
+
+                // 1. Generamos el ID aquí para enviarlo a la base de datos
+                const generatedId = `field_${Date.now()}`;
+                const now = new Date();
+
                 const newField: FieldConfig = {
                     ...field,
-                    id: `field-${Date.now()}`,
+                    id: generatedId,
                     order: currentFields.length,
                     enabled: true,
-                }
+                };
+
+                // 2. Pasamos el objeto con TODAS las propiedades requeridas por el tipo
                 const result = await createFieldConfig({
-                    id: newField.id,
-                    order: newField.order,
+                    id: generatedId,          // Requerido por el tipo
+                    fieldId: generatedId,     // Requerido por el tipo
                     label: newField.label,
                     type: newField.type,
                     required: newField.required,
                     allowFiles: newField.allowFiles,
-                    options: JSON.stringify(newField.options),
+                    options: newField.options || [],
                     enabled: newField.enabled,
-                    userId: "37844ec2-4cc0-46f6-a031-02a8b3c9aa9e",
-                    fieldId: newField.id,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                })
-                console.log("[RESULT]---->", { result });
-                set({ fields: [...currentFields, newField] })
+                    userId: user.id as string, // Aseguramos que sea string
+                    order: newField.order,
+                    createdAt: now,           // Requerido por el tipo
+                    updatedAt: now,           // Requerido por el tipo
+                });
+
+                if (result.success) {
+                    set({ fields: [...currentFields, newField] });
+                }
             },
 
             updateField: (id, updates) => {
@@ -125,7 +141,8 @@ export const useFieldStore = create<FieldStore>()(
                 }))
             },
 
-            deleteField: (id) => {
+            deleteField: async (id) => {
+                await deleteFieldConfig(id);
                 set((state) => ({
                     fields: state.fields.filter((field) => field.id !== id),
                 }))

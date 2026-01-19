@@ -17,6 +17,15 @@ const api = {
         const response = await fetch(BASE_URL + url);
         return response.json();
     },
+    delete: async (url: string, id: string) => {
+        const response = await fetch(BASE_URL + url + `?id=${id}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        return response.json();
+    },
 };
 
 export default api;
