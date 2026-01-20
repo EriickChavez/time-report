@@ -83,25 +83,30 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
   });
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      {/* ENCABEZADO RESPONSIVO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
             Calendario de Actividades
           </h2>
           <p className="text-muted-foreground text-sm">
             Visualización semanal y registro detallado.
           </p>
         </div>
-        <Button onClick={onRegisterClick} size="lg" className="gap-2 shadow-md">
+        <Button
+          onClick={onRegisterClick}
+          size="lg"
+          className="gap-2 shadow-md w-full sm:w-auto"
+        >
           <Clock className="h-5 w-5" />
           Nuevo Registro
         </Button>
       </div>
 
-      {/* VISTA SEMANAL */}
-      <Card className="p-6 shadow-sm border-border">
-        <div className="flex items-center justify-between mb-8">
+      {/* VISTA SEMANAL - Scroll horizontal en móvil */}
+      <Card className="p-4 md:p-6 shadow-sm border-border">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
           <Button
             variant="outline"
             size="icon"
@@ -111,7 +116,7 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h3 className="text-xl font-bold capitalize text-primary">
+          <h3 className="text-lg md:text-xl font-bold capitalize text-primary">
             {weekStart.format("MMMM YYYY")}
           </h3>
           <Button
@@ -123,7 +128,9 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
           </Button>
         </div>
 
-        <div className="grid grid-cols-7 gap-4">
+        {/* Grid: 1 columna en móvil (lista), 7 en desktop. 
+          También puedes usar 'flex overflow-x-auto' si prefieres scroll lateral */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-4">
           {weekDays.map((day, index) => {
             const dayEntries = getEntriesForDate(day);
             const isToday = day.isSame(moment(), "day");
@@ -131,38 +138,47 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
             return (
               <div key={`cal-${index}`} className="flex flex-col">
                 <div
-                  className={`text-center pb-3 mb-2 border-b-2 ${isToday ? "border-primary" : "border-transparent"}`}
+                  className={`text-center pb-2 md:pb-3 mb-2 border-b-2 ${
+                    isToday ? "border-primary" : "border-transparent"
+                  }`}
                 >
                   <span className="text-xs font-semibold text-muted-foreground capitalize">
                     {day.format("ddd")}
                   </span>
                   <div
-                    className={`text-2xl font-black ${isToday ? "text-primary" : ""}`}
+                    className={`text-xl md:text-2xl font-black ${isToday ? "text-primary" : ""}`}
                   >
                     {day.format("D")}
                   </div>
                 </div>
-                <div className="min-h-[160px] bg-muted/20 rounded-xl p-2 space-y-2 border border-dashed border-muted-foreground/20">
-                  {dayEntries.map((entry: any) => (
-                    <div
-                      key={entry.id}
-                      className="bg-card p-2 rounded-lg border shadow-sm text-[11px] hover:ring-1 ring-primary/50 transition-all"
-                    >
-                      <div className="font-bold text-primary mb-1">
-                        {entry.start_time?.slice(0, 5)} -{" "}
-                        {entry.end_time?.slice(0, 5)}
-                      </div>
-                      <div className="truncate font-semibold">
-                        {entry.reporter}
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="mt-2 text-[9px] py-0 leading-none h-4"
-                      >
-                        {entry.status}
-                      </Badge>
+
+                <div className="min-h-[100px] md:min-h-[160px] bg-muted/20 rounded-xl p-2 space-y-2 border border-dashed border-muted-foreground/20">
+                  {dayEntries.length === 0 ? (
+                    <div className="hidden md:block text-[10px] text-center text-muted-foreground/50 pt-4 italic">
+                      Sin citas
                     </div>
-                  ))}
+                  ) : (
+                    dayEntries.map((entry: any) => (
+                      <div
+                        key={entry.id}
+                        className="bg-card p-2 rounded-lg border shadow-sm text-[11px] hover:ring-1 ring-primary/50 transition-all"
+                      >
+                        <div className="font-bold text-primary mb-1">
+                          {entry.start_time?.slice(0, 5)} -{" "}
+                          {entry.end_time?.slice(0, 5)}
+                        </div>
+                        <div className="truncate font-semibold">
+                          {entry.reporter}
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className="mt-2 text-[9px] py-0 h-4"
+                        >
+                          {entry.status}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             );
@@ -170,13 +186,16 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
         </div>
       </Card>
 
-      {/* TABLA DE HISTORIAL DETALLADO */}
+      {/* TABLA DE HISTORIAL DETALLADO - Scroll horizontal controlado */}
       <Card className="shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b bg-muted/10">
+        <div className="px-6 py-4 border-b bg-muted/10 flex justify-between items-center">
           <h3 className="text-lg font-bold">Historial Detallado</h3>
+          <span className="text-xs text-muted-foreground md:hidden italic">
+            Desliza ↔
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted">
+          <table className="w-full text-sm min-w-[800px] md:min-w-full">
             <thead>
               <tr className="border-b bg-muted/5 text-muted-foreground">
                 <th className="text-left py-4 px-6 font-semibold">
@@ -185,8 +204,6 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
                 <th className="text-left py-4 px-6 font-semibold">
                   Responsable
                 </th>
-
-                {/* COLUMNAS DINÁMICAS BASADAS EN CONFIGURACIÓN */}
                 {extraFields.map((field) => (
                   <th
                     key={field.id}
@@ -195,7 +212,6 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
                     {field.label}
                   </th>
                 ))}
-
                 <th className="text-left py-4 px-6 font-semibold">Estado</th>
                 <th className="text-right py-4 px-6 font-semibold">Acciones</th>
               </tr>
@@ -228,22 +244,16 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
                     <td className="py-4 px-6 font-medium">
                       {entry.reporter || "N/A"}
                     </td>
-
-                    {/* RENDERIZADO DE DATOS DINÁMICOS USANDO field_data */}
-                    {extraFields.map((field) => {
-                      const value = entry.field_data
-                        ? entry.field_data[field.id]
-                        : null;
-                      return (
-                        <td
-                          key={field.id}
-                          className="py-4 px-6 text-muted-foreground truncate max-w-[200px]"
-                        >
-                          {value || <span className="opacity-30">-</span>}
-                        </td>
-                      );
-                    })}
-
+                    {extraFields.map((field) => (
+                      <td
+                        key={field.id}
+                        className="py-4 px-6 text-muted-foreground truncate max-w-[150px] md:max-w-[200px]"
+                      >
+                        {entry.field_data?.[field.id] || (
+                          <span className="opacity-30">-</span>
+                        )}
+                      </td>
+                    ))}
                     <td className="py-4 px-6">
                       <Badge
                         variant={
@@ -251,7 +261,7 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
                             ? "default"
                             : "secondary"
                         }
-                        className="font-semibold"
+                        className="font-semibold whitespace-nowrap"
                       >
                         {entry.status}
                       </Badge>

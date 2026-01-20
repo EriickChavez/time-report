@@ -7,7 +7,7 @@ import { ExportView } from "@/components/export-view";
 import { ConfigurationView } from "@/components/configuration-view";
 import { UserInfo } from "@/components/user-info";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Download, Settings } from "lucide-react";
+import { Calendar, Clock, Download, Settings, Menu, X } from "lucide-react";
 import { getCurrentUser } from "./actions/auth";
 import { redirect } from "next/navigation";
 
@@ -15,6 +15,8 @@ export default function Home() {
   const [activeView, setActiveView] = useState<
     "calendar" | "register" | "export" | "config"
   >("calendar");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const validateUser = async () => {
     const user = await getCurrentUser();
     if (!user) {
@@ -23,13 +25,54 @@ export default function Home() {
   };
 
   useEffect(() => {
-    Promise.resolve(validateUser());
+    validateUser();
   }, []);
 
+  const menuItems = [
+    { id: "calendar", label: "Calendario", icon: Calendar },
+    { id: "register", label: "Registrar tiempo", icon: Clock },
+    { id: "export", label: "Exportar", icon: Download },
+    { id: "config", label: "Configuración", icon: Settings },
+  ] as const;
+
+  const handleNavigation = (view: typeof activeView) => {
+    setActiveView(view);
+    setIsMenuOpen(false); // Cierra el menú al navegar
+  };
+
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* 1. Botón Hamburguesa Móvil (Aparece en pantallas < md) */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="bg-sidebar border-sidebar-border"
+        >
+          {isMenuOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
+
+      {/* 2. Overlay para móvil (Cierra el menú al hacer clic fuera) */}
+      {isMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
+      {/* 3. Sidebar (Se adapta dinámicamente) */}
+      <aside
+        className={`
+        fixed md:relative z-40 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-300 ease-in-out
+        ${isMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+      `}
+      >
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-xl font-bold text-sidebar-foreground">
             Reporte de tiempo
@@ -38,60 +81,40 @@ export default function Home() {
 
         <nav className="flex-1 p-4">
           <div className="space-y-2">
-            <Button
-              variant={activeView === "calendar" ? "default" : "ghost"}
-              className="w-full justify-start text-base"
-              onClick={() => setActiveView("calendar")}
-            >
-              <Calendar className="mr-3 h-5 w-5" />
-              Calendario
-            </Button>
-
-            <Button
-              variant={activeView === "register" ? "default" : "ghost"}
-              className="w-full justify-start text-base"
-              onClick={() => setActiveView("register")}
-            >
-              <Clock className="mr-3 h-5 w-5" />
-              Registrar tiempo
-            </Button>
-
-            <Button
-              variant={activeView === "export" ? "default" : "ghost"}
-              className="w-full justify-start text-base"
-              onClick={() => setActiveView("export")}
-            >
-              <Download className="mr-3 h-5 w-5" />
-              Exportar
-            </Button>
-
-            <Button
-              variant={activeView === "config" ? "default" : "ghost"}
-              className="w-full justify-start text-base"
-              onClick={() => setActiveView("config")}
-            >
-              <Settings className="mr-3 h-5 w-5" />
-              Configuración
-            </Button>
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.id}
+                  variant={activeView === item.id ? "default" : "ghost"}
+                  className="w-full justify-start text-base"
+                  onClick={() => handleNavigation(item.id)}
+                >
+                  <Icon className="mr-3 h-5 w-5" />
+                  {item.label}
+                </Button>
+              );
+            })}
           </div>
         </nav>
 
-        {/* User Info and Logout */}
         <div className="p-4 border-t border-sidebar-border">
           <UserInfo />
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {activeView === "calendar" && (
-          <CalendarView onRegisterClick={() => setActiveView("register")} />
-        )}
-        {activeView === "register" && (
-          <TimeRegistration onSuccess={() => setActiveView("calendar")} />
-        )}
-        {activeView === "export" && <ExportView />}
-        {activeView === "config" && <ConfigurationView />}
+      {/* 4. Contenido Principal */}
+      <main className="flex-1 overflow-auto w-full pt-16 md:pt-0">
+        <div className="h-full">
+          {activeView === "calendar" && (
+            <CalendarView onRegisterClick={() => setActiveView("register")} />
+          )}
+          {activeView === "register" && (
+            <TimeRegistration onSuccess={() => setActiveView("calendar")} />
+          )}
+          {activeView === "export" && <ExportView />}
+          {activeView === "config" && <ConfigurationView />}
+        </div>
       </main>
     </div>
   );
