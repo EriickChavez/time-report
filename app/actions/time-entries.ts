@@ -1,14 +1,13 @@
 "use server"
 
 import api from "@/services/api";
-import { CREATE_TIME_ENTRY_URL, GET_TIME_ENTRIES_BY_USER_URL, POST_TIME_ENTRY_URL } from "@/services/services";
+import { CREATE_TIME_ENTRY_URL, DELETE_TIME_ENTRY_URL, GET_TIME_ENTRIES_BY_USER_URL, POST_TIME_ENTRY_URL } from "@/services/services";
 import { revalidatePath } from "next/cache"
 const API_URL = "http://localhost:4000/api";
 
 
 export async function getTimeEntriesByUser(userId: string) {
     try {
-        // 2. Asegúrate de concatenar la URL base completa
         const response = await api.get(`${GET_TIME_ENTRIES_BY_USER_URL}?userId=${userId}`)
         console.log("[GET_TIME_ENTRIES_BY_USER_URL]", response)
         if (!response.success) {
@@ -41,17 +40,10 @@ export async function createTimeEntry(entryData: any) {
  */
 export async function deleteTimeEntry(id: string) {
     try {
-        const response = await fetch(`${API_URL}/time-entries/${id}`, {
-            method: 'DELETE',
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            revalidatePath("/dashboard/time-reports");
-        }
-
-        return result;
+        console.log("[DELETE_TIME_ENTRY_URL]", id)
+        const response = await api.delete(`${DELETE_TIME_ENTRY_URL}`, id)
+        if (response.success) revalidatePath("/dashboard/time-reports");
+        return response;
     } catch (error) {
         console.error("Error deleting entry:", error);
         return { success: false, message: "Error al eliminar el registro" };

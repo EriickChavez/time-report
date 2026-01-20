@@ -53,6 +53,7 @@ export function CalendarView({ onRegisterClick }: CalendarViewProps) {
   const handleDelete = async (id: string) => {
     if (confirm("¿Estás seguro de eliminar este registro?")) {
       await deleteEntry(id);
+      await initializeEntries();
     }
   };
 

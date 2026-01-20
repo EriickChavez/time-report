@@ -19,6 +19,8 @@ const api = {
         return response.json();
     },
     delete: async (url: string, id: string) => {
+        console.log("URL", BASE_URL, url);
+        console.log("ID", id)
         const response = await fetch(BASE_URL + url + `?id=${id}`, {
             method: "DELETE",
             headers: {

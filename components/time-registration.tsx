@@ -14,10 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useFieldStore } from "@/store/useFieldStore";
 import { useTimeEntryStore, TimeEntry } from "@/store/TimeEntryStore";
-import { Badge } from "@/components/ui/badge";
 import moment from "moment";
 
 interface TimeRegistrationProps {
@@ -81,7 +80,7 @@ export function TimeRegistration({ onSuccess }: TimeRegistrationProps) {
         reporter: reporterField ? formData[reporterField.id] : "Sin nombre",
         status: statusField ? formData[statusField.id] : "Progreso",
         fieldData: { ...formData },
-        files: [], // Aquí se integrarían URLs tras subir archivos a un storage
+        files: [],
       };
 
       await addEntry(entry);
