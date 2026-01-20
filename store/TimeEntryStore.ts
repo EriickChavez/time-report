@@ -1,93 +1,88 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { getLocalStorageItem } from "@/lib/storage";
+import { createTimeEntry, getTimeEntriesByUser, deleteTimeEntry } from "@/app/actions/time-entries";
 
-import { create } from "zustand"
-import { TimeEntry } from "@/types/time-entry"
-import { TimeEntryRepository } from "@/interfaces/TimeEntryRepository"
-import { PrismaTimeEntryRepository } from "@/infrastructure/PrismaTimeEntryRepository"
-import moment from "moment"
-
-interface TimeEntryStore {
-    entries: TimeEntry[]
-    userId: string | null
-    repository: TimeEntryRepository
-    setUserId: (userId: string | null) => void
-    setRepository: (repository: TimeEntryRepository) => void
-    fetchEntries: () => Promise<void>
-    addEntry: (entry: Omit<TimeEntry, "id" | "userId" | "created_at" | "updated_at">) => Promise<void>
-    deleteEntry: (id: string) => Promise<void>
-    updateEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>
-    getEntriesByDateRange: (startDate: string, endDate: string) => TimeEntry[]
-    getEntriesByDate: (date: string) => TimeEntry[]
+export interface TimeEntry {
+    id: string;
+    userId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    reporter: string;
+    status: string;
+    fieldData: Record<string, any>;
+    files: string[];
 }
 
-export const useTimeEntryStore = create<TimeEntryStore>((set, get) => ({
-    entries: [],
-    userId: null,
-    repository: new PrismaTimeEntryRepository(), // Prisma implementation
+interface TimeEntryStore {
+    entries: TimeEntry[];
+    initializeEntries: () => Promise<void>;
+    addEntry: (entry: Omit<TimeEntry, "id" | "userId">) => Promise<void>;
+    deleteEntry: (id: string) => Promise<void>;
+}
 
-    setUserId: (userId) => {
-        set({ userId })
-        if (userId) get().fetchEntries()
-    },
+export const useTimeEntryStore = create<TimeEntryStore>()(
+    persist(
+        (set) => ({
+            entries: [],
+            initializeEntries: async () => {
+                const userJson = getLocalStorageItem("user");
+                if (!userJson) return;
+                const user = JSON.parse(userJson);
+                const result = await getTimeEntriesByUser(user.id);
+                // Ajuste para manejar si la API devuelve directamente el array o un objeto con .entries
+                if (result.success) set({ entries: Array.isArray(result.data) ? result.data : (result.data.entries || []) });
+            },
+            addEntry: async (entryData) => {
+                const userJson = getLocalStorageItem("user");
+                if (!userJson) return;
+                const user = JSON.parse(userJson);
 
-    setRepository: (repository: TimeEntryRepository) => {
-        set({ repository })
-        if (get().userId) get().fetchEntries()
-    },
+                // PAYLOAD EXACTO PARA TU BACKEND
+                // Coincide con: const { userId, date, startTime, ... } = req.body;
+                const backendPayload = {
+                    userId: user.id,          // Cambiado de user_id a userId
+                    date: entryData.date,      // YYYY-MM-DD
+                    startTime: entryData.startTime, // Cambiado de start_time a startTime
+                    endTime: entryData.endTime,     // Cambiado de end_time a endTime
+                    reporter: entryData.reporter,
+                    status: entryData.status,
+                    fieldData: entryData.fieldData, // Cambiado de field_data a fieldData
+                    files: entryData.files || []
+                };
 
-    fetchEntries: async () => {
-        const { userId, repository } = get()
-        if (!userId) return
+                try {
+                    const result = await createTimeEntry(backendPayload);
 
-        const entries = await repository.getEntries(userId)
-        set({ entries })
-    },
+                    if (result && result.success) {
+                        // Importante: Tu backend devuelve { id, userId, date, status } en result.data
+                        // Combinamos con entryData para no perder la información visual en el store
+                        const newEntry = {
+                            ...result.data,
+                            startTime: entryData.startTime,
+                            endTime: entryData.endTime,
+                            reporter: entryData.reporter,
+                            fieldData: entryData.fieldData,
+                            files: entryData.files || []
+                        };
 
-    addEntry: async (entry) => {
-        const { userId, repository } = get()
-        if (!userId) return
-
-        const newEntry = await repository.addEntry({ ...entry, userId })
-        if (newEntry) {
-            set((state) => ({
-                entries: [newEntry, ...state.entries],
-            }))
-        }
-    },
-
-    deleteEntry: async (id) => {
-        const { userId, repository } = get()
-        if (!userId) return
-
-        const success = await repository.deleteEntry(id, userId)
-        if (success) {
-            set((state) => ({
-                entries: state.entries.filter((entry) => entry.id !== id),
-            }))
-        }
-    },
-
-    updateEntry: async (id, updates) => {
-        const { userId, repository } = get()
-        if (!userId) return
-
-        const updatedEntry = await repository.updateEntry(id, userId, updates)
-        if (updatedEntry) {
-            set((state) => ({
-                entries: state.entries.map((entry) => (entry.id === id ? updatedEntry : entry)),
-            }))
-        }
-    },
-
-    getEntriesByDateRange: (startDate, endDate) => {
-        const start = moment(startDate)
-        const end = moment(endDate)
-        return get().entries.filter((entry) => {
-            const entryDate = moment(entry.date)
-            return entryDate.isSameOrAfter(start, "day") && entryDate.isSameOrBefore(end, "day")
-        })
-    },
-
-    getEntriesByDate: (date) => {
-        return get().entries.filter((entry) => entry.date === date)
-    },
-}))
+                        set((state) => ({
+                            entries: [newEntry, ...state.entries]
+                        }));
+                    } else {
+                        throw new Error(result?.message || "Error al guardar");
+                    }
+                } catch (error: any) {
+                    console.error("Error en addEntry Store:", error);
+                    throw error; // Re-lanzar para que el componente muestre el alert
+                }
+            },
+            deleteEntry: async (id) => {
+                const result = await deleteTimeEntry(id);
+                if (result.success) set((state) => ({ entries: state.entries.filter(e => e.id !== id) }));
+            }
+        }),
+        { name: "time-entries-storage" }
+    )
+);

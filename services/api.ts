@@ -14,6 +14,7 @@ const api = {
         return response.json();
     },
     get: async (url: string) => {
+        console.log("URL", BASE_URL, url);
         const response = await fetch(BASE_URL + url);
         return response.json();
     },

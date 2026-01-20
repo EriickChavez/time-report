@@ -82,7 +82,6 @@ export function ConfigurationView() {
             Agregar Campo
           </Button>
         </div>
-
         {/* Add Field Dialog */}
         {showAddDialog && (
           <Card className="p-6 mb-6 border-2 border-primary">

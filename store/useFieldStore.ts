@@ -21,7 +21,7 @@ interface FieldStore {
     updateField: (id: string, updates: Partial<FieldConfig>) => void
     deleteField: (id: string) => void
     reorderFields: (fields: FieldConfig[]) => void
-    getEnabledFields: () => FieldConfig[];
+    getEnabledFields: () => Promise<FieldConfig[]>;
 }
 
 const DEFAULT_FIELDS: FieldConfig[] = [
@@ -85,15 +85,30 @@ const DEFAULT_FIELDS: FieldConfig[] = [
 export const useFieldStore = create<FieldStore>()(
     persist(
         (set, get) => ({
-            fields: [],//DEFAULT_FIELDS,
-
+            fields: [],
             initializeFields: async () => {
-                const currentFields = await getAllFieldConfigs();
-                console.log("[CURRENT FIELDS]", currentFields);
-                if (!currentFields.success) return;
-                if (!!currentFields.fieldConfig && currentFields.fieldConfig.length > 0) {
-                    set({ fields: currentFields.fieldConfig as FieldConfig[] })
+                const userJson = getLocalStorageItem("user");
+                if (!userJson) return;
+                const user = JSON.parse(userJson);
+
+                const currentFields = await getAllFieldConfigs(user.id);
+
+                if (currentFields.success && currentFields.data) {
+                    const sortedFields = currentFields.data
+                        .map((f: any) => ({
+                            ...f,
+                            id: f.fieldId,
+                        }))
+                        .sort((a: any, b: any) => a.order - b.order);
+
+                    const cleanFields = sortedFields.map((f: any, index: number) => ({
+                        ...f,
+                        order: index
+                    }));
+
+                    set({ fields: cleanFields });
                 }
+
             },
 
             addField: async (field) => {
@@ -149,20 +164,10 @@ export const useFieldStore = create<FieldStore>()(
             },
 
             reorderFields: (fields) => {
-                const reordered = fields.map((field, index) => ({ ...field, order: index }))
-                set({ fields: reordered })
-            },
 
-            getEnabledFields: () => {
-                console.log("getEnabledFields -------------------");
-                Promise.resolve(getAllFieldConfigs()).then((result) => {
-                    console.log("[RESULT]", { result });
-                }).catch((error) => {
-                    console.error("[ERROR]", error);
-                })
-                return get()
-                    .fields.filter((field) => field.enabled)
-                    .sort((a, b) => a.order - b.order)
+            },
+            getEnabledFields: async () => {
+                return get().fields;
             },
         }),
         {
